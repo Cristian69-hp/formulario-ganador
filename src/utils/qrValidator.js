@@ -1,5 +1,5 @@
 // URL de tu Apps Script desplegado como Web App
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby8eGgKwejen3wccvq6tkrPbZ6bCXz-GqWKkEle2QuKoDNIn3zqdkcGsRLU0FpbeQ64xA/exec'; // Reemplazar con la URL real
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwTLFI_Tcu4wGfESml9DDwzIKpgGyBDef_e3-f6W1YgvuHvlfmZbWlg-n7Dk6QInxY58A/exec'; // Reemplazar con la URL real
 
 /**
  * Obtiene el código QR de la URL actual
