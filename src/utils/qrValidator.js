@@ -1,6 +1,6 @@
 // utils/qrValidator.js
 
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwD5cziqDZKLZOAtun38w3D4BgL8YYDN75-59HdHNSdbs-JwTXifcDrYQEpcXBWo4-ZVw/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyHwjESkowKbE-lcGsdnnk8Cvwe20ILkmEsH1UhKaft9dXxMW2zISG7iDKQTQD9hMNyPA/exec';
 
 /**
  * Obtiene el código QR de la URL actual
