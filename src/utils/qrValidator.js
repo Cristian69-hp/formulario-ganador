@@ -17,20 +17,12 @@ export const getQRFromURL = () => {
  */
 export const verificarQRActivo = async (qrCode) => {
     try {
-        const response = await fetch(APPS_SCRIPT_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                action: 'verificarQR',
-                qr: qrCode
-            })
-        });
+        const url = `${APPS_SCRIPT_URL}?action=verificarQR&qr=${qrCode}`;
 
-        if (!response.ok) {
-            throw new Error('Error en la respuesta del servidor');
-        }
+        const response = await fetch(url, {
+            method: 'GET',
+            redirect: 'follow'
+        });
 
         const data = await response.json();
         return {
@@ -54,24 +46,21 @@ export const verificarQRActivo = async (qrCode) => {
  */
 export const enviarDatosGanador = async (formData, qrCode) => {
     try {
-        const response = await fetch(APPS_SCRIPT_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                action: 'registrarGanador',
-                qr: qrCode,
-                nombre: formData.nombre,
-                apellido: formData.apellido,
-                telefono: formData.telefono,
-                correo: formData.email
-            })
+        const params = new URLSearchParams({
+            action: 'registrarGanador',
+            qr: qrCode,
+            nombre: formData.nombre,
+            apellido: formData.apellido,
+            telefono: formData.telefono,
+            correo: formData.email
         });
 
-        if (!response.ok) {
-            throw new Error('Error en la respuesta del servidor');
-        }
+        const url = `${APPS_SCRIPT_URL}?${params.toString()}`;
+
+        const response = await fetch(url, {
+            method: 'GET',
+            redirect: 'follow'
+        });
 
         const data = await response.json();
         return data;
