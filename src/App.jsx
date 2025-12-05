@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Mail, Phone, User, Gift, Utensils, AlertCircle } from 'lucide-react';
-import { getQRFromURL, verificarQRActivo, enviarDatosGanador } from './utils/qrValidator';
+import { Mail, Phone, User, Gift, Utensils, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
+import { getQRFromURL, verificarQRActivo, enviarDatosGanador, verificarDuplicado } from './utils/qrValidator';
 
 function App() {
   const [formData, setFormData] = useState({
@@ -16,6 +16,11 @@ function App() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [errors, setErrors] = useState({});
+  const [verificandoDuplicados, setVerificandoDuplicados] = useState(false);
+  const [duplicados, setDuplicados] = useState({
+    telefono: false,
+    email: false
+  });
 
   // Verificar QR al cargar la página
   useEffect(() => {
@@ -36,6 +41,51 @@ function App() {
 
     verificarQR();
   }, []);
+
+  // Debounce para verificar duplicados
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (formData.telefono.length === 10 || formData.email.includes('@')) {
+        verificarDuplicadosDB();
+      }
+    }, 800); // Espera 800ms después de que el usuario deja de escribir
+
+    return () => clearTimeout(timer);
+  }, [formData.telefono, formData.email]);
+
+  const verificarDuplicadosDB = async () => {
+    if (!formData.telefono && !formData.email) return;
+
+    setVerificandoDuplicados(true);
+
+    const resultado = await verificarDuplicado(
+      formData.telefono.length === 10 ? formData.telefono : null,
+      formData.email.includes('@') && formData.email.includes('.') ? formData.email : null
+    );
+
+    setDuplicados({
+      telefono: resultado.telefonoDuplicado,
+      email: resultado.correoDuplicado
+    });
+
+    setVerificandoDuplicados(false);
+
+    // Actualizar errores si hay duplicados
+    const newErrors = { ...errors };
+    if (resultado.telefonoDuplicado) {
+      newErrors.telefono = 'Este teléfono ya está registrado';
+    } else if (errors.telefono === 'Este teléfono ya está registrado') {
+      delete newErrors.telefono;
+    }
+
+    if (resultado.correoDuplicado) {
+      newErrors.email = 'Este correo ya está registrado';
+    } else if (errors.email === 'Este correo ya está registrado') {
+      delete newErrors.email;
+    }
+
+    setErrors(newErrors);
+  };
 
   const validateField = (name, value) => {
     let error = '';
@@ -72,10 +122,20 @@ function App() {
     });
 
     const error = validateField(name, value);
-    setErrors({
-      ...errors,
-      [name]: error
-    });
+    const newErrors = { ...errors };
+
+    if (error) {
+      newErrors[name] = error;
+    } else {
+      // Limpiar solo errores de validación local, no los de duplicado
+      if (newErrors[name] &&
+        newErrors[name] !== 'Este teléfono ya está registrado' &&
+        newErrors[name] !== 'Este correo ya está registrado') {
+        delete newErrors[name];
+      }
+    }
+
+    setErrors(newErrors);
   };
 
   const handleSubmit = async () => {
@@ -86,6 +146,11 @@ function App() {
 
     if (Object.values(errors).some(error => error)) {
       alert('Por favor corrige los errores antes de continuar');
+      return;
+    }
+
+    if (duplicados.telefono || duplicados.email) {
+      alert('No puedes registrarte con datos que ya están en uso');
       return;
     }
 
@@ -101,6 +166,48 @@ function App() {
     } else {
       alert(resultado.message || 'Error al registrar. Intenta nuevamente.');
     }
+  };
+
+  // Función para mostrar el icono de estado
+  const getFieldIcon = (fieldName, fieldValue) => {
+    if (!fieldValue) return null;
+
+    const isDuplicate = duplicados[fieldName];
+    const hasError = errors[fieldName];
+
+    if (verificandoDuplicados && (fieldName === 'telefono' || fieldName === 'email')) {
+      return (
+        <div className="absolute right-4 top-1/2 -translate-y-1/2">
+          <div className="w-5 h-5 border-2 border-orange-400 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      );
+    }
+
+    if (isDuplicate || hasError) {
+      return (
+        <div className="absolute right-4 top-1/2 -translate-y-1/2">
+          <XCircle className="w-5 h-5 text-red-500" />
+        </div>
+      );
+    }
+
+    if (fieldName === 'telefono' && fieldValue.length === 10) {
+      return (
+        <div className="absolute right-4 top-1/2 -translate-y-1/2">
+          <CheckCircle className="w-5 h-5 text-green-500" />
+        </div>
+      );
+    }
+
+    if (fieldName === 'email' && fieldValue.includes('@') && fieldValue.includes('.')) {
+      return (
+        <div className="absolute right-4 top-1/2 -translate-y-1/2">
+          <CheckCircle className="w-5 h-5 text-green-500" />
+        </div>
+      );
+    }
+
+    return null;
   };
 
   // Pantalla de verificación
@@ -233,9 +340,12 @@ function App() {
                       name="telefono"
                       value={formData.telefono}
                       onChange={handleChange}
-                      className="w-full bg-white/10 border border-white/20 rounded-2xl pl-12 pr-5 py-4 text-white placeholder-orange-300/50 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-300 backdrop-blur-sm"
+                      className={`w-full bg-white/10 border ${duplicados.telefono ? 'border-red-500' : 'border-white/20'
+                        } rounded-2xl pl-12 pr-12 py-4 text-white placeholder-orange-300/50 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-300 backdrop-blur-sm`}
                       placeholder="300 123 4567"
+                      maxLength="10"
                     />
+                    {getFieldIcon('telefono', formData.telefono)}
                     <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-orange-500/10 to-amber-500/10 opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none" />
                   </div>
                   {errors.telefono && <p className="text-red-400 text-xs mt-1 ml-1">{errors.telefono}</p>}
@@ -253,9 +363,11 @@ function App() {
                       name="email"
                       value={formData.email}
                       onChange={handleChange}
-                      className="w-full bg-white/10 border border-white/20 rounded-2xl pl-12 pr-5 py-4 text-white placeholder-orange-300/50 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-300 backdrop-blur-sm"
+                      className={`w-full bg-white/10 border ${duplicados.email ? 'border-red-500' : 'border-white/20'
+                        } rounded-2xl pl-12 pr-12 py-4 text-white placeholder-orange-300/50 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-300 backdrop-blur-sm`}
                       placeholder="tu@email.com"
                     />
+                    {getFieldIcon('email', formData.email)}
                     <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-orange-500/10 to-amber-500/10 opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none" />
                   </div>
                   {errors.email && <p className="text-red-400 text-xs mt-1 ml-1">{errors.email}</p>}
@@ -264,7 +376,7 @@ function App() {
                 {/* Botón premium */}
                 <button
                   onClick={handleSubmit}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || verificandoDuplicados || duplicados.telefono || duplicados.email}
                   className="w-full relative overflow-hidden bg-gradient-to-r from-orange-600 to-amber-600 text-white font-bold py-5 rounded-2xl shadow-2xl transform hover:scale-105 active:scale-100 transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed group"
                 >
                   <span className="relative z-10 flex items-center justify-center gap-3">

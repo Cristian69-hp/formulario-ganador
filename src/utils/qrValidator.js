@@ -47,6 +47,59 @@ export const verificarQRActivo = async (qrCode) => {
 };
 
 /**
+ * Verifica si el teléfono o correo ya están registrados
+ * @param {string} telefono - Número de teléfono a verificar
+ * @param {string} correo - Correo electrónico a verificar
+ * @returns {Promise<{duplicado: boolean, telefonoDuplicado: boolean, correoDuplicado: boolean, mensaje: string}>}
+ */
+export const verificarDuplicado = async (telefono, correo) => {
+    if (!telefono && !correo) {
+        return {
+            duplicado: false,
+            telefonoDuplicado: false,
+            correoDuplicado: false,
+            mensaje: 'No hay datos para verificar'
+        };
+    }
+
+    try {
+        const params = new URLSearchParams();
+        params.append('action', 'verificarDuplicado');
+        if (telefono) params.append('telefono', telefono);
+        if (correo) params.append('correo', correo);
+
+        const url = `${APPS_SCRIPT_URL}?${params.toString()}`;
+
+        const response = await fetch(url, {
+            method: 'GET',
+            mode: 'cors',
+            cache: 'no-cache'
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        return {
+            duplicado: !!data.duplicado,
+            telefonoDuplicado: !!data.telefonoDuplicado,
+            correoDuplicado: !!data.correoDuplicado,
+            mensaje: data.mensaje || 'Verificación completada'
+        };
+    } catch (error) {
+        console.error('Error verificando duplicados:', error);
+        return {
+            duplicado: false,
+            telefonoDuplicado: false,
+            correoDuplicado: false,
+            mensaje: 'Error al verificar. Intenta de nuevo.'
+        };
+    }
+};
+
+/**
  * Envía los datos del ganador usando FormData + POST
  * → Evita problemas de longitud de URL
  * → Evita problemas con caracteres especiales (@, espacios, etc)
@@ -64,7 +117,7 @@ export const enviarDatosGanador = async (formData, qrCode) => {
     try {
         const response = await fetch(APPS_SCRIPT_URL, {
             method: 'POST',
-            body: formDataToSend, // ← Esto es la clave: evita CORS preflight
+            body: formDataToSend,
             mode: 'cors'
         });
 
